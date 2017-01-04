@@ -14,6 +14,12 @@ use Yii;
  */
 class ConfigConfigurationModel extends BaseConfigurationModel
 {
+    const MULTI_FILTER_MODE_UNION = 'union';
+    const MULTI_FILTER_MODE_INTERSECTION = 'intersection';
+    const FILTER_PARENTS_ONLY = 'parents_only';
+    const FILTER_CHILDREN_ONLY = 'children_only';
+    const FILTER_ALL = 'all';
+
     /**
      * @var int How much products per page to show
      */
@@ -49,10 +55,16 @@ class ConfigConfigurationModel extends BaseConfigurationModel
      */
     public $deleteOrdersAbility = false;
 
+
     /**
-     * @var bool Filtration works only on parent products but not their children
+     * @var string the mode of products filtering
      */
-    public $filterOnlyByParentProduct = true;
+    public $productsFilteringMode = self::FILTER_PARENTS_ONLY;
+
+    /**
+     * @var string Filtration mode
+     */
+    public $multiFilterMode = self::MULTI_FILTER_MODE_INTERSECTION;
 
     /**
      * @var int How much last viewed products ID's to store in session
@@ -111,7 +123,7 @@ class ConfigConfigurationModel extends BaseConfigurationModel
     /**
      * @var bool Show filter links in breadcrumbs
      */
-    public $showFiltersInBreadcrumbs = false;
+    public $showFiltersInBreadcrumbs = true;
 
     /**
      * @var bool Use method ceilQuantity of Measure model
@@ -182,9 +194,9 @@ class ConfigConfigurationModel extends BaseConfigurationModel
                 [
                     'showProductsOfChildCategories',
                     'deleteOrdersAbility',
-                    'filterOnlyByParentProduct',
                     'showDeletedOrders',
                     'showFiltersInBreadcrumbs',
+                    'useCeilQuantity',
                 ],
                 'boolean',
             ],
@@ -192,7 +204,6 @@ class ConfigConfigurationModel extends BaseConfigurationModel
                 [
                     'showProductsOfChildCategories',
                     'deleteOrdersAbility',
-                    'filterOnlyByParentProduct',
                 ],
                 'filter',
                 'filter' => 'boolval',
@@ -216,7 +227,12 @@ class ConfigConfigurationModel extends BaseConfigurationModel
                     }
                 }
             ],
-            [['itemView', 'listView'], 'string'],
+            [
+                'productsFilteringMode',
+                'in',
+                'range' => array_keys($this->getFilterModes())
+            ],
+            [['itemView', 'listView', 'multiFilterMode', 'productsFilteringMode'], 'string'],
         ];
     }
 
@@ -231,6 +247,7 @@ class ConfigConfigurationModel extends BaseConfigurationModel
             'countChildrenProducts' => Yii::t('app', 'Count children products'),
             'defaultMeasureId' => Yii::t('app', 'Default measure'),
             'registrationGuestUserInCart' => Yii::t('app', 'Registration Guest User In Cart'),
+            'multiFilterMode' => Yii::t('app', 'MultiFilter mode'),
         ];
     }
 
@@ -316,6 +333,27 @@ class ConfigConfigurationModel extends BaseConfigurationModel
             '@shop' => dirname(__FILE__) . '/../',
             '@category' => '/shop/product/list',
             '@product' => '/shop/product/show',
+        ];
+    }
+
+    public static function getMultiFilterModes()
+    {
+        return [
+            self::MULTI_FILTER_MODE_UNION => 'Union',
+            self::MULTI_FILTER_MODE_INTERSECTION => 'Intersection',
+        ];
+    }
+
+    /**
+     * Get dropdown list options for productsFilteringMode
+     * @return array
+     */
+    public static function getFilterModes()
+    {
+        return [
+            self::FILTER_PARENTS_ONLY => Yii::t('app', 'Parents only'),
+            self::FILTER_CHILDREN_ONLY => Yii::t('app', 'Children only'),
+            self::FILTER_ALL => Yii::t('app', 'Parents and children'),
         ];
     }
 }

@@ -111,7 +111,7 @@ $config = [
         'assetManager' => [
             'class' => 'yii\web\AssetManager',
             'bundles' => require(__DIR__ . '/' . (!YII_DEBUG ? 'assets-prod.php' : 'assets-dev.php')),
-            'linkAssets' => YII_DEBUG && !stristr(PHP_OS, 'WIN'),
+            'linkAssets' => YII_DEBUG && stripos(PHP_OS, 'WIN')!==0,
         ],
         'user' => [
             'class' => '\yii\web\User',
@@ -138,7 +138,6 @@ $config = [
             ],
         ],
         'errorHandler' => [
-//            'class' => 'app\components\DotplantErrorHandler',
             'errorAction' => 'default/error',
         ],
         'log' => [

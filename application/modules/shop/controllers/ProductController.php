@@ -29,10 +29,20 @@ use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\web\ServerErrorHttpException;
+use app\modules\seo\behaviors\SetCanonicalBehavior;
 
 class ProductController extends Controller
 {
     use DynamicContentTrait;
+
+    public function behaviors()
+    {
+        return [
+            [
+                'class' => SetCanonicalBehavior::className()
+            ]
+        ];
+    }
 
     /**
      * Products listing by category with filtration support.
@@ -202,14 +212,14 @@ class ProductController extends Controller
                     /** @var ThemeWidgets $widgetModel */
                     $widgetModel = $activeWidget->widget;
                     /** @var BaseWidget $widgetClassName */
-                    $widgetClassName =  $widgetModel->widget;
+                    $widgetClassName = $widgetModel->widget;
                     $widgetConfiguration = Json::decode($widgetModel->configuration_json, true);
                     if (!is_array($widgetConfiguration)) {
                         $widgetConfiguration = [];
                     }
                     $activeWidgetConfiguration = Json::decode($activeWidget->configuration_json, true);
                     if (!is_array($activeWidgetConfiguration)) {
-                        $activeWidgetConfiguration  = [];
+                        $activeWidgetConfiguration = [];
                     }
                     $config = ArrayHelper::merge($widgetConfiguration, $activeWidgetConfiguration);
                     $config['themeWidgetModel'] = $widgetModel;
@@ -226,6 +236,7 @@ class ProductController extends Controller
                     [
                         '/shop/product/list',
                         'last_category_id' => $selected_category_id,
+                        'category_group_id' => $category_group_id,
                         'properties' => $values_by_property_id
                     ]
                 ),
@@ -252,24 +263,7 @@ class ProductController extends Controller
             throw new ServerErrorHttpException('Object not found.');
         }
 
-        $cacheKey = 'Product:' . $model_id;
-        if (false === $product = Yii::$app->cache->get($cacheKey)) {
-            if (null === $product = Product::findById($model_id)) {
-                throw new NotFoundHttpException;
-            }
-            Yii::$app->cache->set(
-                $cacheKey,
-                $product,
-                86400,
-                new TagDependency(
-                    [
-                        'tags' => [
-                            ActiveRecordHelper::getObjectTag(Product::className(), $model_id),
-                        ]
-                    ]
-                )
-            );
-        }
+        $product = Product::findById($model_id);
 
         $request = Yii::$app->request;
 
@@ -318,6 +312,7 @@ class ProductController extends Controller
         $selected_category = ($selected_category_id > 0) ? Category::findById($selected_category_id) : null;
 
         $this->view->title = $product->title;
+        $this->view->blocks['h1'] = $product->h1;
         $this->view->blocks['announce'] = $product->announce;
         $this->view->blocks['content'] = $product->content;
         $this->view->blocks['title'] = $product->title;
@@ -424,12 +419,12 @@ class ProductController extends Controller
     }
 
     /**
-    * This function build array for widget "Breadcrumbs"
-    * @param Category $selCat - model of current category
-    * @param Product|null $product - model of product, if current page is a page of product
-    * @param array $properties - array of properties and static values
-    * Return an array for widget or empty array
-    */
+     * This function build array for widget "Breadcrumbs"
+     * @param Category $selCat - model of current category
+     * @param Product|null $product - model of product, if current page is a page of product
+     * @param array $properties - array of properties and static values
+     * Return an array for widget or empty array
+     */
     private function buildBreadcrumbsArray($selCat, $product = null, $properties = [])
     {
         if ($selCat === null) {
@@ -438,23 +433,29 @@ class ProductController extends Controller
 
         // init
         $breadcrumbs = [];
-        if ($product !== null) {
-            $crumbs[$product->slug] = !empty($product->breadcrumbs_label) ? $product->breadcrumbs_label : '';
+        if ($product !== null && !empty($selCat) && empty($product->breadcrumbs_label) === false) {
+            $crumbs[$product->breadcrumbs_label] = Url::to(
+                [
+                    '@product',
+                    'model' => $product,
+                    'category_group_id' => $selCat->category_group_id,
+                ]
+            );
         }
-        $crumbs[$selCat->slug] = $selCat->breadcrumbs_label;
-
         // get basic data
-        $parent = $selCat->parent_id > 0 ? Category::findById($selCat->parent_id) : null;
+        $parent = empty($selCat) === false ? $selCat : null;
         while ($parent !== null) {
-            $crumbs[$parent->slug] = $parent->breadcrumbs_label;
+            $crumbs[$parent->breadcrumbs_label] = [
+                '@category',
+                'last_category_id' => $parent->id,
+                'category_group_id' => $parent->category_group_id,
+            ];
             $parent = $parent->parent;
         }
 
         // build array for widget
-        $url = '';
         $crumbs = array_reverse($crumbs, true);
-        foreach ($crumbs as $slug => $label) {
-            $url .= '/' . $slug;
+        foreach ($crumbs as $label => $url) {
             $breadcrumbs[] = [
                 'label' => $label,
                 'url' => $url
@@ -469,7 +470,7 @@ class ProductController extends Controller
             $params = [];
             foreach ($properties as $propertyId => $propertyStaticValues) {
                 $localParams = $params;
-                foreach ($propertyStaticValues as $propertyStaticValue) {
+                foreach ((array)$propertyStaticValues as $propertyStaticValue) {
                     $psv = PropertyStaticValues::findById($propertyStaticValue);
                     if (is_null($psv)) {
                         continue;

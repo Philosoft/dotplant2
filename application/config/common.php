@@ -7,15 +7,16 @@ $params = require(__DIR__ . '/params.php');
 
 if (file_exists(__DIR__ . '/aliases.php')) {
     $aliases = require(__DIR__ . '/aliases.php');
-    foreach ($aliases as $alias => $path) {
-        Yii::setAlias($alias, $path);
+    foreach ($aliases as $alias => $value) {
+        Yii::setAlias($alias, $value);
     }
 }
 
 return [
     'timeZone' => 'Europe/Moscow',
     'bootstrap' => [
-        'mail'
+        'mail',
+        'event'
     ],
     'modules' => [
         'data' => [
@@ -31,6 +32,9 @@ return [
         'image' => [
             'class' => 'app\modules\image\ImageModule',
         ],
+        'event' => [
+            'class' => 'app\modules\event\EventModule'
+        ]
     ],
     'components' => [
         'db' => $db,
@@ -45,4 +49,9 @@ return [
         ],
     ],
     'params' => $params,
+    'controllerMap' => [
+        'stubs' => [
+            'class' => 'bazilio\stubsgenerator\StubsController',
+        ],
+    ],
 ];

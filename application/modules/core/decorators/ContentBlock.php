@@ -20,7 +20,7 @@ class ContentBlock extends PreDecorator
      */
     public function decorate($controller, $viewFile, $params)
     {
-        if (!Yii::$app->getModule("backend")->isBackend()) {
+        if (!Yii::$app->getModule("backend")->isBackend() && !empty($params['model'])) {
             $baseContentKey = get_class($params['model'])
                 . ':'
                 . (isset($params['model']->id) ? $params['model']->id : '')
@@ -37,19 +37,16 @@ class ContentBlock extends PreDecorator
                 $baseContentKey . "title",
                 $dependency
             );
-            if (!empty($view->blocks["content"])) {
-                $view->blocks["content"] = $this->processChunks(
-                    $view->blocks["content"],
-                    $baseContentKey . "content",
-                    $dependency
-                );
-            }
-            if (!empty($view->blocks["announce"])) {
-                $view->blocks["announce"] = $this->processChunks(
-                    $view->blocks["announce"],
-                    $baseContentKey . "announce",
-                    $dependency
-                );
+            if ($view->blocks !== null) {
+                foreach ($view->blocks as $blockName => &$blockContent) {
+                    if (!empty($blockContent)) {
+                        $blockContent = $this->processChunks(
+                            $blockContent,
+                            $baseContentKey . $blockName,
+                            $dependency
+                        );
+                    }
+                }
             }
         }
     }

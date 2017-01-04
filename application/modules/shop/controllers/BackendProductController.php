@@ -32,6 +32,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 use app\backend\actions\MassPublishAction;
 use app\backend\actions\CategoryMovementsAction;
+use app\modules\shop\actions\BatchEditPriceAction;
 
 class BackendProductController extends BackendController
 {
@@ -137,6 +138,9 @@ class BackendProductController extends BackendController
             ],
             'categoryMovements' => [
                 'class' => CategoryMovementsAction::className(),
+            ],
+            'batch-edit-price' => [
+                'class' => BatchEditPriceAction::className(),
             ]
         ];
     }
@@ -340,7 +344,9 @@ class BackendProductController extends BackendController
 
         if (isset($post['GeneratePropertyValue'])) {
             $generateValues = $post['GeneratePropertyValue'];
-            $post[HasProperties::FIELD_ADD_PROPERTY_GROUP]['Product'] = $post['PropertyGroup']['id'];
+            if(empty($parent->propertyGroups[$post['PropertyGroup']['id']])){
+                $post[HasProperties::FIELD_ADD_PROPERTY_GROUP]['Product'] = $post['PropertyGroup']['id'];
+            }
         } else {
             $generateValues = [];
         }

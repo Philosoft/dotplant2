@@ -17,12 +17,62 @@ use devgroup\TagDependencyHelper\ActiveRecordHelper;
 use Yii;
 use yii\caching\TagDependency;
 use yii\filters\AccessControl;
+use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 
 class PropertiesController extends Controller
 {
+    protected function checkDoubledSlugs($slug)
+    {
+        if (empty($slug) === false) {
+            $propertyStaticValues = PropertyStaticValues::find()
+                ->where(['slug' => $slug])
+                ->all();
+            if (count($propertyStaticValues) > 1) {
+                $result = Html::tag('h4', Yii::t('app', 'You have doubled slugs. Fix it please.'));
+                $result .= Html::beginTag('ul');
+                foreach ($propertyStaticValues as $propertyStaticValue) {
+                    $property = Property::findById($propertyStaticValue->property_id);
+                    if ($property !== null) {
+                        $propertyGroup = PropertyGroup::findById($property->property_group_id);
+                        $result .= Html::tag(
+                            'li',
+                            ($propertyGroup !== null ? Html::a(
+                                $propertyGroup->name,
+                                [
+                                    '/backend/properties/group',
+                                    'id' => $property->property_group_id,
+                                ]
+                            ) : '')
+                            . ' > '
+                            . Html::a(
+                                $property->name,
+                                [
+                                    '/backend/properties/edit-property',
+                                    'id' => $propertyStaticValue->property_id,
+                                    'property_group_id' => $property->property_group_id,
+                                ]
+                            )
+                            . ' > '
+                            . Html::a(
+                                $propertyStaticValue->name,
+                                [
+                                    '/backend/properties/edit-static-value',
+                                    'id' => $propertyStaticValue->id,
+                                    'property_id' => $propertyStaticValue->property_id,
+                                    'property_group_id' => $property->property_group_id,
+                                ]
+                            )
+                        );
+                    }
+                }
+                $result .= Html::endTag('ul');
+                Yii::$app->session->setFlash('warning', $result);
+            }
+        }
+    }
 
     public function behaviors()
     {
@@ -126,7 +176,7 @@ class PropertiesController extends Controller
     {
         switch ($value_type) {
             case 'STRING':
-                return 'TINYTEXT';
+                return 'TEXT';
             case 'NUMBER':
                 return 'FLOAT';
             default:
@@ -150,13 +200,13 @@ class PropertiesController extends Controller
             if (!$propertyHandler->changePropertyType($model)) {
                 if ($model->is_column_type_stored) {
                     if ($model->isNewRecord) {
+                        $col_type = $this->getColumnType($model->value_type);
                         $object = Object::findById($model->group->object_id);
                         Yii::$app->db->createCommand()
-                            ->addColumn($object->column_properties_table_name, $model->key, "TINYTEXT")
+                            ->addColumn($object->column_properties_table_name, $model->key, $col_type)
                             ->execute();
                         if ($object->object_class == Form::className()) {
                             $submissionObject = Object::getForClass(Submission::className());
-                            $col_type = $this->getColumnType($model->value_type);
                             Yii::$app->db->createCommand()
                                 ->addColumn($submissionObject->column_properties_table_name, $model->key, $col_type)
                                 ->execute();
@@ -272,6 +322,7 @@ class PropertiesController extends Controller
         if ($model->load($post) && $model->validate()) {
             $save_result = $model->save();
             if ($save_result) {
+                $this->checkDoubledSlugs($model->slug);
                 $this->runAction('save-info');
                 Yii::$app->session->setFlash('success', Yii::t('app', 'Record has been saved'));
                 $returnUrl = Yii::$app->request->get(
@@ -330,6 +381,7 @@ class PropertiesController extends Controller
         $model->property_id = $property->id;
         if (Yii::$app->request->isPost) {
             if ($model->load(Yii::$app->request->post()) && $model->save()) {
+                $this->checkDoubledSlugs($model->slug);
                 $tags = [
                     ActiveRecordHelper::getCommonTag(Property::className()),
                     ActiveRecordHelper::getObjectTag(Property::className(), $property->id),

@@ -163,6 +163,15 @@ $editable_formOptions = [
                     ],
                 ],
                 [
+                    'attribute' => 'text',
+                    'class' => \kartik\grid\EditableColumn::className(),
+                    'editableOptions' => [
+                        'inputType' => Editable::INPUT_TEXTAREA,
+                        'formOptions' => $editable_formOptions,
+                        'placement' => PopoverX::ALIGN_BOTTOM,
+                    ],
+                ],
+                [
                     'attribute' => 'custom_view_file',
                     'class' => \kartik\grid\EditableColumn::className(),
                     'editableOptions' => [
@@ -255,7 +264,7 @@ $editable_formOptions = [
             <input type="file" name="file">
         </div>
         <button type="submit" class="btn btn-primary"><?= Icon::show('upload') . ' ' . Yii::t('app', 'Upload') ?></button>
-    </form>
+    <?php ActiveForm::end() ?>
 </section>
 <?php
 $script = <<< SCRIPT

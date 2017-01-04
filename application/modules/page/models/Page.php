@@ -189,12 +189,15 @@ class Page extends ActiveRecord implements \JsonSerializable
      */
     public static function findById($id, $is_published = 1)
     {
+        if (!is_numeric($id)) {
+            return null;
+        }
         if (!isset(static::$identity_map[$id])) {
 
             $cacheKey = "Page:$id:$is_published";
             static::$identity_map[$id] = Yii::$app->cache->get($cacheKey);
             if (!is_object(static::$identity_map[$id])) {
-                static::$identity_map[$id] = Page::findOne(['id' => $id, 'published' => $is_published]);
+                static::$identity_map[$id] = Page::find()->where(['id' => $id, 'published' => $is_published])->with('images')->one();
 
                 if (is_object(static::$identity_map[$id])) {
                     Yii::$app->cache->set(
@@ -254,6 +257,17 @@ class Page extends ActiveRecord implements \JsonSerializable
     }
 
     /**
+     * @inheritdoc
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        static::$identity_map[$this->id] = $this;
+
+    }
+
+    /**
      * Compiles url for subdomain's links like http://subdomain.example.com
      *
      * Respects schema, relies on Yii::$app->getModule("core")->serverName as main domain name
@@ -266,7 +280,7 @@ class Page extends ActiveRecord implements \JsonSerializable
     private function compileUrl($sub_domain, $slug = "")
     {
         $schema = Yii::$app->request->isSecureConnection ? "https://" : "http://";
-        $main_domain = Yii::$app->getModule("core")->getBaseUrl();
+        $main_domain = str_replace('www.', '', Yii::$app->getModule("core")->serverName);
 
         return "{$schema}{$sub_domain}.{$main_domain}/{$slug}";
     }
@@ -281,7 +295,7 @@ class Page extends ActiveRecord implements \JsonSerializable
         $parent_model = $this->parent;
 
         if (intval($this->slug_absolute) === 1) {
-            $slug = $this->slug === ":mainpage:" ? "" : $this->slug;
+            $slug = ($this->slug === ":mainpage:" || $this->slug === ":subdomainmainpage:") ? "" : $this->slug;
             $subdomain = null;
             if (empty($this->subdomain) === false) {
                 $subdomain = $this->subdomain;

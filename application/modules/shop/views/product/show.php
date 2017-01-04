@@ -17,6 +17,7 @@ use app\modules\shop\models\Product;
 use app\modules\image\widgets\ObjectImageWidget;
 use kartik\helpers\Html;
 use yii\helpers\Url;
+use app\modules\shop\widgets\AddToWishlistWidget;
 
 $this->title = $this->blocks['title'];
 $this->params['breadcrumbs'] = $breadcrumbs;
@@ -99,13 +100,14 @@ $propertiesShowedInAnnounce = false;
                         <?=Yii::t('app', 'Add to')?> <i class="fa fa-shopping-cart"></i>
                     </a>
                     <br/>
-                    <a href="<?=Url::to([
-                        '/shop/product-compare/add',
-                        'id' => $model->id,
-                        'backUrl' => Yii::$app->request->url,
-                    ])?>" class="btn-add-to-compare" rel="nofollow">
+                    <a href='#' class="btn-add-to-compare" rel="nofollow" data-action="add-to-compare" data-id="<?=$model->id?>">
                         <?= Yii::t('app', 'Add to compare') ?>
                     </a>
+                    <br/>
+                    <a href='#' class="btn-add-to-wishlist" rel="nofollow" data-toggle="modal" data-target="#wishlist">
+                        <?=Yii::t('app', 'Add to wishlist')?>
+                    </a>
+                    <?= AddToWishlistWidget::widget(['id' => $model->id]) ?>
                 </div>
             </div>
         </div>

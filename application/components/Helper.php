@@ -76,7 +76,7 @@ class Helper
             "с" => "s", "т" => "t", "у" => "u", "ф" => "f", "х" => "h",
             "ц" => "c", "ч" => "ch" ,"ш" => "sh", "щ" => "sch", "ъ" => "",
             "ы" => "y", "ь" => "", "э" => "e", "ю" => "yu", "я" => "ya",
-            " " => "-", "." => "", "/" => "-"
+            " " => "-", "." => "", "/" => "-", "_" => "-"
         ];
         $source = preg_replace('#[^a-z0-9\-]#is', '', strtr($source, $translateArray));
         return trim(preg_replace('#-{2,}#is', '-', $source));
@@ -98,9 +98,8 @@ class Helper
         $text = trim(strip_tags($text));
         $pos = mb_strrpos(mb_substr($text, 0, $length), ' ');
         $string = mb_substr($text, 0, $pos);
-        $string .= $dots;
         if (!empty($string)) {
-            return $string;
+            return $string.$dots;
         } else {
             return "";
         }
